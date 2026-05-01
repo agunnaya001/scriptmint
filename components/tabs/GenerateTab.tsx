@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { toast } from "sonner";
 import { CopyBtn } from "@/components/CopyBtn";
 import { ThumbnailPreview } from "@/components/ThumbnailPreview";
 
@@ -34,7 +35,11 @@ export default function GenerateTab({ G, user, supabase, seriesDay, onGenerated 
   const [generatingThumbnail, setGeneratingThumbnail] = useState(false);
 
   const generate = async () => {
-    if (!pillar || !format || !topic.trim()) return;
+    if (!pillar || !format || !topic.trim()) {
+      toast.error("Select pillar, format, and enter a topic");
+      return;
+    }
+    
     setLoading(true);
     setResult(null);
     setError(null);
@@ -54,16 +59,25 @@ export default function GenerateTab({ G, user, supabase, seriesDay, onGenerated 
         }),
       });
 
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
+
       const parsed = await res.json();
       if (parsed.error) throw new Error(parsed.error);
       setResult(parsed);
+      toast.success("Script generated successfully!");
 
       // Auto-save to Supabase
       await saveScript(parsed);
     } catch (e) {
-      setError("Generation failed — try again.");
+      const errorMsg = e instanceof Error ? e.message : "Generation failed";
+      setError(errorMsg);
+      toast.error(errorMsg);
+      console.error("Generation error:", e);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const saveScript = async (scriptData: any) => {
@@ -86,9 +100,11 @@ export default function GenerateTab({ G, user, supabase, seriesDay, onGenerated 
       });
 
       if (insertError) throw insertError;
+      toast.success("Script saved to database!");
       onGenerated();
     } catch (err) {
       console.error("Error saving script:", err);
+      toast.error("Failed to save script");
     }
   };
 

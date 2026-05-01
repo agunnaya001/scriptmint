@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { CopyBtn } from "@/components/CopyBtn";
 
@@ -44,12 +45,18 @@ export default function AnalyticsTab({ G, user, supabase, history }: AnalyticsTa
   };
 
   const addAnalyticsEntry = async () => {
-    if (!selectedScript || !newEntry.views || !newEntry.likes) return;
+    if (!selectedScript || !newEntry.views || !newEntry.likes) {
+      toast.error("Select a script and enter views & likes");
+      return;
+    }
 
     setSaving(true);
     try {
       const script = history.find((s) => s.id === selectedScript);
-      if (!script) return;
+      if (!script) {
+        toast.error("Script not found");
+        return;
+      }
 
       const { error } = await supabase.from("analytics").insert({
         user_id: user.id,
@@ -66,8 +73,11 @@ export default function AnalyticsTab({ G, user, supabase, history }: AnalyticsTa
 
       setNewEntry({ views: "", likes: "", date: new Date().toISOString().split("T")[0] });
       setSelectedScript("");
+      toast.success("Analytics entry saved!");
       await loadAnalytics();
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to save analytics";
+      toast.error(errorMsg);
       console.error("Error adding analytics:", err);
     } finally {
       setSaving(false);

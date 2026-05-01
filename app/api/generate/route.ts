@@ -24,11 +24,20 @@ Keep video 30-60 seconds. Make it specific to Web3, Solidity, NFTs, OnChainArt, 
 export async function POST(req: NextRequest) {
   try {
     const { pillar, format, topic, seriesDay } = await req.json();
+
+    if (!pillar || !format || !topic) {
+      return NextResponse.json({ error: "Missing required fields: pillar, format, topic" }, { status: 400 });
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: "Anthropic API key not configured" }, { status: 500 });
+    }
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -38,11 +47,30 @@ export async function POST(req: NextRequest) {
         messages: [{ role: "user", content: `Pillar: ${pillar}\nFormat: ${format}\nTopic: ${topic}\nSeries day: ${seriesDay}` }],
       }),
     });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error("Anthropic API error:", response.status, errorData);
+      return NextResponse.json({ error: "Failed to generate script from Anthropic" }, { status: response.status });
+    }
+
     const data = await response.json();
-    const raw = data.content.map((i: any) => i.text || "").join("");
-    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-    return NextResponse.json(parsed);
+    const raw = data.content?.map((i: any) => i.text || "").join("");
+
+    if (!raw) {
+      return NextResponse.json({ error: "No content generated" }, { status: 500 });
+    }
+
+    try {
+      const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+      return NextResponse.json(parsed);
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      return NextResponse.json({ error: "Invalid response format from AI" }, { status: 500 });
+    }
   } catch (e) {
-    return NextResponse.json({ error: "Generation failed" }, { status: 500 });
+    console.error("Error generating script:", e);
+    const errorMsg = e instanceof Error ? e.message : "Generation failed";
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

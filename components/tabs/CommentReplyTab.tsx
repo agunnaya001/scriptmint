@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { toast } from "sonner";
 import { CopyBtn } from "@/components/CopyBtn";
 
 interface CommentReplyTabProps {
@@ -15,7 +16,11 @@ export default function CommentReplyTab({ G, user, supabase }: CommentReplyTabPr
   const [error, setError] = useState<string | null>(null);
 
   const generateReply = async () => {
-    if (!comment.trim()) return;
+    if (!comment.trim()) {
+      toast.error("Paste a comment to generate a reply");
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setGeneratedReply(null);
@@ -27,10 +32,15 @@ export default function CommentReplyTab({ G, user, supabase }: CommentReplyTabPr
         body: JSON.stringify({ comment }),
       });
 
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
+
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
       setGeneratedReply(data.reply);
+      toast.success("Reply generated!");
 
       // Optionally save to database
       await supabase.from("comment_replies").insert({
@@ -38,8 +48,12 @@ export default function CommentReplyTab({ G, user, supabase }: CommentReplyTabPr
         original_comment: comment,
         generated_reply: data.reply,
       });
+      
+      toast.success("Reply saved to database!");
     } catch (err) {
-      setError("Failed to generate reply. Try again.");
+      const errorMsg = err instanceof Error ? err.message : "Failed to generate reply";
+      setError(errorMsg);
+      toast.error(errorMsg);
       console.error("Error:", err);
     } finally {
       setLoading(false);

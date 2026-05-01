@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
+import { Toaster, toast } from "sonner";
 import { useSupabase } from "@/lib/supabase-client";
 import GenerateTab from "@/components/tabs/GenerateTab";
 import CalendarTab from "@/components/tabs/CalendarTab";
@@ -22,11 +23,29 @@ const G = {
 
 export default function ScriptMint() {
   const { user, isLoaded } = useUser();
-  const { redirectToSignIn } = useClerk();
+  const { redirectToSignIn, signOut: clerkSignOut } = useClerk();
   const supabase = useSupabase();
   const [view, setView] = useState("generate");
   const [history, setHistory] = useState<any[]>([]);
   const [seriesDay, setSeriesDay] = useState(1);
+
+  const signOut = useCallback(async () => {
+    await clerkSignOut({ redirectUrl: "/" });
+  }, [clerkSignOut]);
+
+  const navStyle = (id: string) => ({
+    background: view === id ? G.accent : "transparent",
+    color: view === id ? G.bg : G.muted,
+    border: "none",
+    padding: "6px 12px",
+    borderRadius: 4,
+    fontSize: 11,
+    fontFamily: "'DM Mono',monospace",
+    cursor: "pointer",
+    transition: "all .2s",
+    fontWeight: 500,
+    letterSpacing: ".05em",
+  });
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -57,6 +76,7 @@ export default function ScriptMint() {
       setHistory(data || []);
     } catch (err) {
       console.error("Error loading history:", err);
+      toast.error("Failed to load script history");
     }
   };
 
@@ -107,6 +127,7 @@ export default function ScriptMint() {
 
   return (
     <div style={{ minHeight: "100vh", background: G.bg, color: G.text, fontFamily: "'DM Sans',sans-serif" }}>
+      <Toaster position="bottom-right" theme="dark" richColors />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
         *{box-sizing:border-box}
@@ -149,8 +170,36 @@ export default function ScriptMint() {
             </button>
           ))}
         </nav>
-        <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: G.muted }}>
-          Day <span style={{ color: G.accent }}>{seriesDay}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: G.muted }}>
+            Day <span style={{ color: G.accent }}>{seriesDay}</span>
+          </div>
+          <button
+            onClick={() => {
+              signOut();
+            }}
+            style={{
+              background: "transparent",
+              border: `1px solid ${G.border}`,
+              color: G.muted,
+              padding: "6px 12px",
+              borderRadius: 4,
+              fontSize: 11,
+              cursor: "pointer",
+              fontFamily: "'DM Mono',monospace",
+              transition: "all .2s",
+            }}
+            onMouseEnter={(e) => {
+              (e.target as HTMLElement).style.borderColor = G.accent;
+              (e.target as HTMLElement).style.color = G.text;
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLElement).style.borderColor = G.border;
+              (e.target as HTMLElement).style.color = G.muted;
+            }}
+          >
+            SIGN OUT
+          </button>
         </div>
       </header>
 

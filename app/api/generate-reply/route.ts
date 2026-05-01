@@ -8,11 +8,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Comment is required" }, { status: 400 });
     }
 
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: "Anthropic API key not configured" }, { status: 500 });
+    }
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -30,12 +34,23 @@ Reply ONLY with the text, no explanations.`,
       }),
     });
 
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error("Anthropic API error:", response.status, errorData);
+      return NextResponse.json({ error: "Failed to generate reply from Anthropic" }, { status: response.status });
+    }
+
     const data = await response.json();
-    const reply = data.content.map((i: any) => i.text || "").join("").trim();
+    const reply = data.content?.map((i: any) => i.text || "").join("").trim();
+
+    if (!reply) {
+      return NextResponse.json({ error: "No reply generated" }, { status: 500 });
+    }
 
     return NextResponse.json({ reply });
   } catch (e) {
     console.error("Error generating reply:", e);
-    return NextResponse.json({ error: "Reply generation failed" }, { status: 500 });
+    const errorMsg = e instanceof Error ? e.message : "Reply generation failed";
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
