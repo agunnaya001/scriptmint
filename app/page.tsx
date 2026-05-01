@@ -33,20 +33,6 @@ export default function ScriptMint() {
     await clerkSignOut({ redirectUrl: "/" });
   }, [clerkSignOut]);
 
-  const navStyle = (id: string) => ({
-    background: view === id ? G.accent : "transparent",
-    color: view === id ? G.bg : G.muted,
-    border: "none",
-    padding: "6px 12px",
-    borderRadius: 4,
-    fontSize: 11,
-    fontFamily: "'DM Mono',monospace",
-    cursor: "pointer",
-    transition: "all .2s",
-    fontWeight: 500,
-    letterSpacing: ".05em",
-  });
-
   // Redirect if not authenticated
   useEffect(() => {
     if (isLoaded && !user) {
