@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { Toaster, toast } from "sonner";
 import { useSupabase } from "@/lib/supabase-client";
+import { WalletConnectButton } from "@/components/WalletConnectButton";
+import { BaseStatus } from "@/hooks/useBaseIntegration";
 import GenerateTab from "@/components/tabs/GenerateTab";
 import CalendarTab from "@/components/tabs/CalendarTab";
 import HistoryTab from "@/components/tabs/HistoryTab";
@@ -157,8 +159,13 @@ export default function ScriptMint() {
           ))}
         </nav>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <BaseStatus />
           <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: G.muted }}>
             Day <span style={{ color: G.accent }}>{seriesDay}</span>
+          </div>
+          <div style={{ width: 1, height: 24, background: G.border }} />
+          <div style={{ width: 120 }}>
+            <WalletConnectButton />
           </div>
           <button
             onClick={() => {
